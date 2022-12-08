@@ -10,8 +10,13 @@ const ejsMate = require('ejs-mate')
 const flash = require('connect-flash');
 // const Campground = require('./models/Campground');
 // const Review = require('./models/review');
-const campgrounds = require('./routes/campgrounds');
-const reviews = require('./routes/reviews');
+
+const passport = require('passport');
+const LocalStrategy = require('passport-local');
+const User = require('./models/user');
+const userRoutes = require('./routes/users');
+const campgroundRoutes = require('./routes/campgrounds');
+const reviewRoutes = require('./routes/reviews');
 
 //mongoDb connection 
 mongoose.connect('mongodb://127.0.0.1:27017/yelp-camp').then(() => {
@@ -41,16 +46,35 @@ const sessionConfig = {
 }
 app.use(session(sessionConfig))
 app.use(flash()) ;
+//session should be used before 
+app.use(passport.initialize()); //Documentaion : Passport.initialize() middleware is used to initialize Passport 
+app.use(passport.session()); //if we want persistent login sessions 
+passport.use(new LocalStrategy(User.authenticate()));//Hello passport we would like u to use the local strategy that we have required above and that local strategy is located on user model which is authenticate () //its comes pre defined with the  passport local mongoose 
+
+passport.serializeUser(User.serializeUser()) ; //how do we store user in the session 
+passport.deserializeUser(User.deserializeUser()) ; //how we get that user out of that session
+
+
+
+//global access , availabe in every template 
 app.use((req, res, next) => {
+    console.log(req.session)
+    res.locals.currentUser = req.user;
     res.locals.success = req.flash('success');
     res.locals.error = req.flash('error');
     next();
-}) //video no 493 :(
+})
+// app.use((req, res, next) => {
+//     res.locals.success = req.flash('success');
+//     res.locals.error = req.flash('error');
+//     next();
+// }) //video no 493 :(
 app.get('/' ,(req,res)=>{
     res.render('home');
 })
-app.use('/campgrounds', campgrounds)
-app.use('/campgrounds/:id/reviews', reviews)
+app.use('/', userRoutes);
+app.use('/campgrounds', campgroundRoutes)
+app.use('/campgrounds/:id/reviews', reviewRoutes)
  
 
 app.use((err, req, res, next) => {
