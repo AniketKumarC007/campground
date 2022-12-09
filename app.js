@@ -1,3 +1,7 @@
+if (process.env.NODE_ENV !== "production") {
+    require('dotenv').config();
+}
+// Well, process.env.NODE_ENV is an environment variable that is usually just development or production. We are in development so we  require the Env package, which is going to take the variables we've defined in this .env file and add them into processed enc in my Node app so I can access them in this file or any of my other files.
 const express =require('express');
 const app = express();
 const path = require('path');
