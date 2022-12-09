@@ -21,14 +21,17 @@ const User = require('./models/user');
 const userRoutes = require('./routes/users');
 const campgroundRoutes = require('./routes/campgrounds');
 const reviewRoutes = require('./routes/reviews');
-
+const MongoDBStore = require("connect-mongo");
 //mongoDb connection 
-mongoose.connect('mongodb://127.0.0.1:27017/yelp-camp').then(() => {
+const dbUrl = process.env.DB_URL || 'mongodb://localhost:27017/yelp-camp';
+// console.log(dbUrl) ;
+mongoose.connect(dbUrl).then(() => {
     console.log("Mongo is now connected ");
 }).catch(err =>{
     console.log(err);
     console.log("oops didnt connect");
 })
+
 
 app.engine('ejs' , ejsMate);
 app.set('view engine' ,'ejs');
@@ -36,12 +39,22 @@ app.use(express.urlencoded({ extended: true }));
 app.use(methodOverride('_method'));
 app.use(express.static(path.join(__dirname, 'public'))) // we should add in our public directory to serve our static assets
 // so that we could have images and custom style sheets and Java scripts, JavaScript scripts that we can respond with.
+const secret = process.env.SECRET || 'thisshouldbeabettersecret!';
+
+// const store = new MongoDBStore({
+//     url: dbUrl,
+//     secret,
+//     touchAfter: 24 * 60 * 60 // avoid resaving the session on every refresh if the session was exactly same
+// });
+
 const sessionConfig = {
+    store: MongoDBStore.create({ mongoUrl:dbUrl  , touchAfter :24 * 60 * 60}),
+    name : 'session',
     secret: 'thisshouldbeabettersecret!',
     resave: false,
     saveUninitialized: true,
     cookie: {
-        httpOnly: true, //f this flag is included on a cookie,  the cookie cannot be accessed through client side scripts. And as a result, even if cross-site scripting, which is really not something we've discussed yet,
+        httpOnly: true, //if this flag is included on a cookie,  the cookie cannot be accessed through client side scripts. And as a result, even if cross-site scripting,
         // but even if that flaw exists and a user accidentally accesses a link that exploits this flaw, the browser will not reveal the cookie to a third party.
         // It's just a little extra security thing that we should add in.
         expires: Date.now() + 1000 * 60 * 60 * 24 * 7, //expiration date is set till a week  (we dont want that if a user signs in then it should infinitely remain signed in )
@@ -62,7 +75,7 @@ passport.deserializeUser(User.deserializeUser()) ; //how we get that user out of
 
 //global access , availabe in every template 
 app.use((req, res, next) => {
-    console.log(req.session)
+    // console.log(req.session)
     res.locals.currentUser = req.user;
     res.locals.success = req.flash('success');
     res.locals.error = req.flash('error');
